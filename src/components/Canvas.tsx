@@ -15,6 +15,7 @@ import '@xyflow/react/dist/style.css';
 
 import { useCanvasStore } from '@/store/useCanvasStore';
 import { TextNode } from '@/components/nodes/TextNode';
+import { SkeletonNode } from '@/components/nodes/SkeletonNode';
 
 function CanvasInner() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } =
@@ -24,6 +25,7 @@ function CanvasInner() {
   const nodeTypes: NodeTypes = useMemo(
     () => ({
       text: TextNode,
+      skeleton: SkeletonNode,
     }),
     []
   );
@@ -58,7 +60,7 @@ function CanvasInner() {
       <Controls className="!bg-white !border-zinc-200 !shadow-md" />
       <MiniMap
         className="!bg-white !border-zinc-200 !shadow-md"
-        nodeColor="#fef3c7"
+        nodeColor={(node) => node.type === 'skeleton' ? '#e4e4e7' : '#fef3c7'}
         maskColor="rgba(0, 0, 0, 0.1)"
       />
     </ReactFlow>

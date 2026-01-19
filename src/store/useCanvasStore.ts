@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import {
+  Node,
   Edge,
   OnNodesChange,
   OnEdgesChange,
@@ -9,6 +10,7 @@ import {
   addEdge,
 } from '@xyflow/react';
 import type { TextNodeType, TextNodeData } from '@/components/nodes/TextNode';
+import type { SkeletonNodeType, SkeletonNodeData } from '@/components/nodes/SkeletonNode';
 
 export interface ExpandedConcept {
   type: 'scenario' | 'tech' | 'visual' | 'counter';
@@ -16,15 +18,19 @@ export interface ExpandedConcept {
   content: string;
 }
 
+type AppNode = TextNodeType | SkeletonNodeType;
+
 interface CanvasState {
-  nodes: TextNodeType[];
+  nodes: AppNode[];
   edges: Edge[];
-  onNodesChange: OnNodesChange<TextNodeType>;
+  onNodesChange: OnNodesChange<AppNode>;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   addNode: (position: { x: number; y: number }) => void;
   updateNodeText: (nodeId: string, text: string) => void;
-  expandNode: (parentId: string, concepts: ExpandedConcept[]) => void;
+  addSkeletonNodes: (parentId: string) => string[];
+  removeSkeletonNodes: (skeletonIds: string[]) => void;
+  expandNode: (parentId: string, concepts: ExpandedConcept[], skeletonIds: string[]) => void;
 }
 
 // Position offsets for child nodes (arranged in a semi-circle below parent)
@@ -41,7 +47,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   onNodesChange: (changes) => {
     set({
-      nodes: applyNodeChanges(changes, get().nodes) as TextNodeType[],
+      nodes: applyNodeChanges(changes, get().nodes) as AppNode[],
     });
   },
 
@@ -71,19 +77,80 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   updateNodeText: (nodeId, text) => {
     set({
-      nodes: get().nodes.map((node) =>
-        node.id === nodeId
-          ? { ...node, data: { ...node.data, text } }
-          : node
-      ),
+      nodes: get().nodes.map((node) => {
+        if (node.id === nodeId && node.type === 'text') {
+          return {
+            ...node,
+            data: { ...node.data, text },
+          } as TextNodeType;
+        }
+        return node;
+      }),
     });
   },
 
-  expandNode: (parentId, concepts) => {
+  addSkeletonNodes: (parentId) => {
+    const { nodes, edges } = get();
+    const parentNode = nodes.find((n) => n.id === parentId);
+
+    if (!parentNode) return [];
+
+    const timestamp = Date.now();
+    const skeletonIds: string[] = [];
+    const newNodes: SkeletonNodeType[] = [];
+    const newEdges: Edge[] = [];
+
+    CHILD_POSITIONS.forEach((position, index) => {
+      const skeletonId = `skeleton-${timestamp}-${index}`;
+      skeletonIds.push(skeletonId);
+
+      const skeletonNode: SkeletonNodeType = {
+        id: skeletonId,
+        type: 'skeleton',
+        position: {
+          x: parentNode.position.x + position.x,
+          y: parentNode.position.y + position.y,
+        },
+        data: { parentId } as SkeletonNodeData,
+      };
+      newNodes.push(skeletonNode);
+
+      const newEdge: Edge = {
+        id: `edge-${parentId}-${skeletonId}`,
+        source: parentId,
+        target: skeletonId,
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#d4d4d4', strokeDasharray: '5,5' },
+      };
+      newEdges.push(newEdge);
+    });
+
+    set({
+      nodes: [...nodes, ...newNodes] as AppNode[],
+      edges: [...edges, ...newEdges],
+    });
+
+    return skeletonIds;
+  },
+
+  removeSkeletonNodes: (skeletonIds) => {
+    const { nodes, edges } = get();
+    set({
+      nodes: nodes.filter((n) => !skeletonIds.includes(n.id)),
+      edges: edges.filter((e) => !skeletonIds.includes(e.target)),
+    });
+  },
+
+  expandNode: (parentId, concepts, skeletonIds) => {
     const { nodes, edges } = get();
     const parentNode = nodes.find((n) => n.id === parentId);
 
     if (!parentNode) return;
+
+    // Remove skeleton nodes and their edges
+    const filteredNodes = nodes.filter((n) => !skeletonIds.includes(n.id));
+    const filteredEdges = edges.filter((e) => !skeletonIds.includes(e.target));
 
     const timestamp = Date.now();
     const newNodes: TextNodeType[] = [];
@@ -118,8 +185,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     });
 
     set({
-      nodes: [...nodes, ...newNodes],
-      edges: [...edges, ...newEdges],
+      nodes: [...filteredNodes, ...newNodes] as AppNode[],
+      edges: [...filteredEdges, ...newEdges],
     });
   },
 }));

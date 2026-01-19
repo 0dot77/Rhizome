@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Handle, Position, NodeToolbar } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
 import { Sprout, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCanvasStore, ExpandedConcept } from '@/store/useCanvasStore';
@@ -19,6 +20,8 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateNodeText = useCanvasStore((state) => state.updateNodeText);
   const expandNode = useCanvasStore((state) => state.expandNode);
+  const addSkeletonNodes = useCanvasStore((state) => state.addSkeletonNodes);
+  const removeSkeletonNodes = useCanvasStore((state) => state.removeSkeletonNodes);
   const anthropicKey = useSettingsStore((state) => state.anthropicKey);
   const setIsSettingsOpen = useSettingsStore((state) => state.setIsSettingsOpen);
 
@@ -34,16 +37,23 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
 
   const handleExpand = useCallback(async () => {
     if (!data.text.trim()) {
-      alert('Please enter some text first');
+      toast.warning('Please enter some text first');
       return;
     }
 
     if (!anthropicKey) {
+      toast.error('API key required. Opening settings...');
       setIsSettingsOpen(true);
       return;
     }
 
     setIsExpanding(true);
+
+    // Show optimistic skeleton nodes
+    const skeletonIds = addSkeletonNodes(id);
+
+    // Show loading toast
+    const toastId = toast.loading('Expanding idea...');
 
     try {
       const response = await fetch('/api/expand', {
@@ -63,14 +73,29 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
       }
 
       const result: { concepts: ExpandedConcept[] } = await response.json();
-      expandNode(id, result.concepts);
+
+      // Replace skeleton nodes with real nodes
+      expandNode(id, result.concepts, skeletonIds);
+
+      toast.success('Idea expanded successfully!', { id: toastId });
     } catch (error) {
       console.error('Expansion error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to expand idea');
+
+      // Remove skeleton nodes on error
+      removeSkeletonNodes(skeletonIds);
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to expand idea';
+
+      // Check for common API key errors
+      if (errorMessage.includes('401') || errorMessage.includes('invalid') || errorMessage.includes('key')) {
+        toast.error('Failed to expand. Check your API Key.', { id: toastId });
+      } else {
+        toast.error(errorMessage, { id: toastId });
+      }
     } finally {
       setIsExpanding(false);
     }
-  }, [id, data.text, anthropicKey, expandNode, setIsSettingsOpen]);
+  }, [id, data.text, anthropicKey, expandNode, addSkeletonNodes, removeSkeletonNodes, setIsSettingsOpen]);
 
   // Auto-resize textarea
   useEffect(() => {
