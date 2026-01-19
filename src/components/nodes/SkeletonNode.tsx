@@ -2,7 +2,6 @@
 
 import { Handle, Position } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export interface SkeletonNodeData extends Record<string, unknown> {
@@ -14,13 +13,27 @@ export type SkeletonNodeType = Node<SkeletonNodeData, 'skeleton'>;
 export function SkeletonNode({ }: NodeProps<SkeletonNodeType>) {
   return (
     <>
-      <Handle type="target" position={Position.Top} className="!bg-zinc-300" />
-      <Card className="min-w-[200px] max-w-[300px] p-3 bg-zinc-50 border-zinc-200 shadow-md animate-pulse">
-        <Skeleton className="h-4 w-3/4 mb-2" />
-        <Skeleton className="h-3 w-full mb-1" />
-        <Skeleton className="h-3 w-5/6" />
-      </Card>
-      <Handle type="source" position={Position.Bottom} className="!bg-zinc-300" />
+      <Handle type="target" position={Position.Top} className="!bg-zinc-300 !w-3 !h-3" />
+
+      {/* Figma/Miro style skeleton - AI node style (blue) */}
+      <div
+        className="
+          min-w-[220px] max-w-[320px]
+          p-6
+          rounded-md
+          border-t-8
+          border-t-blue-300
+          bg-blue-50/50
+          shadow-lg
+          animate-pulse
+        "
+      >
+        <Skeleton className="h-4 w-3/4 mb-3 bg-blue-200/50" />
+        <Skeleton className="h-3 w-full mb-2 bg-blue-200/50" />
+        <Skeleton className="h-3 w-5/6 bg-blue-200/50" />
+      </div>
+
+      <Handle type="source" position={Position.Bottom} className="!bg-zinc-300 !w-3 !h-3" />
     </>
   );
 }

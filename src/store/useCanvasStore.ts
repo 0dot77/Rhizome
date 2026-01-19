@@ -35,10 +35,10 @@ interface CanvasState {
 
 // Position offsets for child nodes (arranged in a semi-circle below parent)
 const CHILD_POSITIONS = [
-  { x: -300, y: 150 },  // Left
-  { x: -100, y: 200 },  // Center-left
-  { x: 100, y: 200 },   // Center-right
-  { x: 300, y: 150 },   // Right
+  { x: -350, y: 180 },  // Left
+  { x: -120, y: 220 },  // Center-left
+  { x: 120, y: 220 },   // Center-right
+  { x: 350, y: 180 },   // Right
 ];
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -68,7 +68,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       id: `node-${Date.now()}`,
       type: 'text',
       position,
-      data: { text: '' } as TextNodeData,
+      data: { text: '', isAI: false } as TextNodeData,
     };
     set({
       nodes: [...get().nodes, newNode],
@@ -121,7 +121,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         target: skeletonId,
         type: 'smoothstep',
         animated: true,
-        style: { stroke: '#d4d4d4', strokeDasharray: '5,5' },
+        style: { stroke: '#93c5fd', strokeDasharray: '5,5' },
       };
       newEdges.push(newEdge);
     });
@@ -158,7 +158,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
     concepts.forEach((concept, index) => {
       const childId = `node-${timestamp}-${index}`;
-      const position = CHILD_POSITIONS[index] || { x: 0, y: 200 };
+      const position = CHILD_POSITIONS[index] || { x: 0, y: 220 };
 
       const newNode: TextNodeType = {
         id: childId,
@@ -169,6 +169,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         },
         data: {
           text: `${concept.title}\n\n${concept.content}`,
+          isAI: true,
         } as TextNodeData,
       };
       newNodes.push(newNode);
@@ -178,8 +179,8 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         source: parentId,
         target: childId,
         type: 'smoothstep',
-        animated: true,
-        style: { stroke: '#a3a3a3' },
+        animated: false,
+        style: { stroke: '#3b82f6', strokeWidth: 2 },
       };
       newEdges.push(newEdge);
     });

@@ -5,13 +5,13 @@ import { Handle, Position, NodeToolbar } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
 import { Sprout, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCanvasStore, ExpandedConcept } from '@/store/useCanvasStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 export interface TextNodeData extends Record<string, unknown> {
   text: string;
+  isAI?: boolean;
 }
 
 export type TextNodeType = Node<TextNodeData, 'text'>;
@@ -27,6 +27,8 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
 
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanding, setIsExpanding] = useState(false);
+
+  const isAI = data.isAI ?? false;
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -115,13 +117,26 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
 
   const showToolbar = isHovered || selected;
 
+  // Figma/Miro style sticky note colors
+  const containerStyles = isAI
+    ? 'bg-blue-50 border-t-blue-500'
+    : 'bg-yellow-50 border-t-yellow-500';
+
+  const selectedStyles = isAI
+    ? 'ring-2 ring-blue-400 shadow-xl'
+    : 'ring-2 ring-yellow-400 shadow-xl';
+
   return (
     <>
       <NodeToolbar isVisible={showToolbar} position={Position.Right}>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 bg-white shadow-md border border-zinc-200 hover:bg-amber-50 disabled:opacity-50"
+          className={`h-8 w-8 shadow-md border disabled:opacity-50 ${
+            isAI
+              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+              : 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100'
+          }`}
           onClick={handleExpand}
           disabled={isExpanding}
         >
@@ -133,11 +148,21 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
         </Button>
       </NodeToolbar>
 
-      <Handle type="target" position={Position.Top} className="!bg-zinc-400" />
-      <Card
-        className={`min-w-[200px] max-w-[300px] p-3 bg-amber-50 border-amber-200 shadow-md transition-shadow ${
-          selected ? 'shadow-lg ring-2 ring-amber-400' : ''
-        } ${isExpanding ? 'opacity-70' : ''}`}
+      <Handle type="target" position={Position.Top} className="!bg-zinc-400 !w-3 !h-3" />
+
+      {/* Figma/Miro style sticky note */}
+      <div
+        className={`
+          min-w-[220px] max-w-[320px]
+          p-6
+          rounded-md
+          border-t-8
+          shadow-lg
+          transition-all duration-200
+          ${containerStyles}
+          ${selected ? selectedStyles : 'hover:shadow-xl'}
+          ${isExpanding ? 'opacity-70' : ''}
+        `}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -146,12 +171,23 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
           value={data.text}
           onChange={handleChange}
           placeholder="Type your idea..."
-          className="w-full bg-transparent border-none outline-none resize-none text-sm text-zinc-800 placeholder:text-zinc-400"
+          className={`
+            w-full
+            bg-transparent
+            border-none
+            outline-none
+            resize-none
+            text-sm
+            leading-relaxed
+            whitespace-pre-wrap
+            ${isAI ? 'text-blue-900 placeholder:text-blue-300' : 'text-yellow-900 placeholder:text-yellow-400'}
+          `}
           rows={1}
           disabled={isExpanding}
         />
-      </Card>
-      <Handle type="source" position={Position.Bottom} className="!bg-zinc-400" />
+      </div>
+
+      <Handle type="source" position={Position.Bottom} className="!bg-zinc-400 !w-3 !h-3" />
     </>
   );
 }

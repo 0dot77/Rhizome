@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -21,6 +21,8 @@ function CanvasInner() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } =
     useCanvasStore();
   const { screenToFlowPosition } = useReactFlow();
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickCountRef = useRef(0);
 
   const nodeTypes: NodeTypes = useMemo(
     () => ({
@@ -30,16 +32,32 @@ function CanvasInner() {
     []
   );
 
-  const handlePaneDoubleClick = useCallback(
+  // Handle pane click with double-click detection
+  const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
-      // Convert screen coordinates to flow coordinates
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+      clickCountRef.current += 1;
 
-      console.log('Double-click detected at:', position);
-      addNode(position);
+      if (clickCountRef.current === 1) {
+        // First click - wait for potential second click
+        clickTimeoutRef.current = setTimeout(() => {
+          clickCountRef.current = 0;
+        }, 300);
+      } else if (clickCountRef.current === 2) {
+        // Double click detected
+        if (clickTimeoutRef.current) {
+          clearTimeout(clickTimeoutRef.current);
+        }
+        clickCountRef.current = 0;
+
+        // Convert screen coordinates to flow coordinates
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        console.log('Double-click detected at:', position);
+        addNode(position);
+      }
     },
     [screenToFlowPosition, addNode]
   );
@@ -51,7 +69,7 @@ function CanvasInner() {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
-      onDoubleClick={handlePaneDoubleClick}
+      onPaneClick={handlePaneClick}
       nodeTypes={nodeTypes}
       fitView={false}
       defaultViewport={{ x: 0, y: 0, zoom: 1 }}
@@ -64,7 +82,11 @@ function CanvasInner() {
       <Controls className="!bg-white !border-zinc-200 !shadow-md" />
       <MiniMap
         className="!bg-white !border-zinc-200 !shadow-md"
-        nodeColor={(node) => node.type === 'skeleton' ? '#e4e4e7' : '#fef3c7'}
+        nodeColor={(node) => {
+          if (node.type === 'skeleton') return '#bfdbfe'; // blue-200
+          if (node.type === 'text' && node.data?.isAI) return '#93c5fd'; // blue-300
+          return '#fde047'; // yellow-300 for user nodes
+        }}
         maskColor="rgba(0, 0, 0, 0.1)"
       />
     </ReactFlow>
