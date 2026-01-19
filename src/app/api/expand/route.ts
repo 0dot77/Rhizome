@@ -16,6 +16,37 @@ interface ExpandResponse {
   concepts: ExpandedConcept[];
 }
 
+// Language detection utility
+function detectKorean(text: string): boolean {
+  const koreanRegex = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
+  return koreanRegex.test(text);
+}
+
+function getSystemPrompt(isKorean: boolean): string {
+  const languageInstruction = isKorean
+    ? 'You are a helpful assistant. Please answer in Korean.'
+    : 'You are a helpful assistant. Please answer in English.';
+
+  return `${languageInstruction}
+
+You are a creative thinking assistant that helps expand ideas in multiple directions.
+Given an idea or concept, generate exactly 4 related concepts:
+1. Scenario: A practical real-world application or use case
+2. Tech: A relevant technology, tool, or technical approach
+3. Visual: A visual metaphor, imagery, or design concept
+4. Counter: A contrasting perspective, challenge, or alternative viewpoint
+
+Respond ONLY with a valid JSON object in this exact format:
+{
+  "concepts": [
+    { "type": "scenario", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
+    { "type": "tech", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
+    { "type": "visual", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
+    { "type": "counter", "title": "Short Title", "content": "Brief description (1-2 sentences)" }
+  ]
+}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: ExpandRequest = await request.json();
@@ -32,22 +63,9 @@ export async function POST(request: NextRequest) {
       apiKey,
     });
 
-    const systemPrompt = `You are a creative thinking assistant that helps expand ideas in multiple directions.
-Given an idea or concept, generate exactly 4 related concepts:
-1. Scenario: A practical real-world application or use case
-2. Tech: A relevant technology, tool, or technical approach
-3. Visual: A visual metaphor, imagery, or design concept
-4. Counter: A contrasting perspective, challenge, or alternative viewpoint
-
-Respond ONLY with a valid JSON object in this exact format:
-{
-  "concepts": [
-    { "type": "scenario", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
-    { "type": "tech", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
-    { "type": "visual", "title": "Short Title", "content": "Brief description (1-2 sentences)" },
-    { "type": "counter", "title": "Short Title", "content": "Brief description (1-2 sentences)" }
-  ]
-}`;
+    // Detect language and get appropriate system prompt
+    const isKorean = detectKorean(prompt);
+    const systemPrompt = getSystemPrompt(isKorean);
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
