@@ -18,11 +18,14 @@ export interface ExpandedConcept {
   content: string;
 }
 
+export type LayoutDirection = 'VERTICAL' | 'HORIZONTAL';
+
 type AppNode = TextNodeType | SkeletonNodeType;
 
 interface CanvasState {
   nodes: AppNode[];
   edges: Edge[];
+  layoutDirection: LayoutDirection;
   onNodesChange: OnNodesChange<AppNode>;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
@@ -31,19 +34,28 @@ interface CanvasState {
   addSkeletonNodes: (parentId: string) => string[];
   removeSkeletonNodes: (skeletonIds: string[]) => void;
   expandNode: (parentId: string, concepts: ExpandedConcept[], skeletonIds: string[]) => void;
+  toggleLayoutDirection: () => void;
 }
 
-// Position offsets for child nodes (arranged in a semi-circle below parent)
-const CHILD_POSITIONS = [
-  { x: -350, y: 180 },  // Left
-  { x: -120, y: 220 },  // Center-left
-  { x: 120, y: 220 },   // Center-right
-  { x: 350, y: 180 },   // Right
+// Position offsets for child nodes based on direction
+const VERTICAL_POSITIONS = [
+  { x: -350, y: 250 },  // Left
+  { x: -120, y: 280 },  // Center-left
+  { x: 120, y: 280 },   // Center-right
+  { x: 350, y: 250 },   // Right
+];
+
+const HORIZONTAL_POSITIONS = [
+  { x: 350, y: -180 },  // Top
+  { x: 380, y: -60 },   // Upper-middle
+  { x: 380, y: 60 },    // Lower-middle
+  { x: 350, y: 180 },   // Bottom
 ];
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   nodes: [],
   edges: [],
+  layoutDirection: 'VERTICAL' as LayoutDirection,
 
   onNodesChange: (changes) => {
     set({
@@ -90,7 +102,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   addSkeletonNodes: (parentId) => {
-    const { nodes, edges } = get();
+    const { nodes, edges, layoutDirection } = get();
     const parentNode = nodes.find((n) => n.id === parentId);
 
     if (!parentNode) return [];
@@ -99,8 +111,9 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const skeletonIds: string[] = [];
     const newNodes: SkeletonNodeType[] = [];
     const newEdges: Edge[] = [];
+    const positions = layoutDirection === 'VERTICAL' ? VERTICAL_POSITIONS : HORIZONTAL_POSITIONS;
 
-    CHILD_POSITIONS.forEach((position, index) => {
+    positions.forEach((position, index) => {
       const skeletonId = `skeleton-${timestamp}-${index}`;
       skeletonIds.push(skeletonId);
 
@@ -143,7 +156,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   expandNode: (parentId, concepts, skeletonIds) => {
-    const { nodes, edges } = get();
+    const { nodes, edges, layoutDirection } = get();
     const parentNode = nodes.find((n) => n.id === parentId);
 
     if (!parentNode) return;
@@ -155,10 +168,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     const timestamp = Date.now();
     const newNodes: TextNodeType[] = [];
     const newEdges: Edge[] = [];
+    const positions = layoutDirection === 'VERTICAL' ? VERTICAL_POSITIONS : HORIZONTAL_POSITIONS;
 
     concepts.forEach((concept, index) => {
       const childId = `node-${timestamp}-${index}`;
-      const position = CHILD_POSITIONS[index] || { x: 0, y: 220 };
+      const position = positions[index] || (layoutDirection === 'VERTICAL' ? { x: 0, y: 280 } : { x: 380, y: 0 });
 
       const newNode: TextNodeType = {
         id: childId,
@@ -189,5 +203,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       nodes: [...filteredNodes, ...newNodes] as AppNode[],
       edges: [...filteredEdges, ...newEdges],
     });
+  },
+
+  toggleLayoutDirection: () => {
+    set((state) => ({
+      layoutDirection: state.layoutDirection === 'VERTICAL' ? 'HORIZONTAL' : 'VERTICAL',
+    }));
   },
 }));

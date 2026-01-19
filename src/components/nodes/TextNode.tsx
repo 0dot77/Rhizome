@@ -154,6 +154,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
       <div
         className={`
           min-w-[220px] max-w-[320px]
+          min-h-[120px]
           p-6
           rounded-md
           border-t-8
@@ -173,6 +174,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
           placeholder="Type your idea..."
           className={`
             w-full
+            min-h-[80px]
             bg-transparent
             border-none
             outline-none
@@ -182,7 +184,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
             whitespace-pre-wrap
             ${isAI ? 'text-blue-900 placeholder:text-blue-300' : 'text-yellow-900 placeholder:text-yellow-400'}
           `}
-          rows={1}
+          rows={3}
           disabled={isExpanding}
         />
       </div>
