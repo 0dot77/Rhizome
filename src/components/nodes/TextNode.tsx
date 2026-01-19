@@ -250,16 +250,18 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
 
       <Handle type="target" position={Position.Top} className="!bg-zinc-400 !w-3 !h-3" />
 
-      {/* Figma/Miro style sticky note */}
+      {/* Figma/Miro style sticky note - Fixed width, auto-height */}
       <div
         className={`
-          min-w-[220px] max-w-[320px]
-          min-h-[120px]
+          w-64
+          min-h-[140px]
           p-6
           rounded-md
           border-t-8
           shadow-lg
-          transition-all duration-200
+          overflow-hidden
+          box-border
+          transition-all duration-200 ease-in-out
           ${containerStyles}
           ${selected ? selectedStyles : 'hover:shadow-xl'}
           ${isDisabled ? 'opacity-70' : ''}
@@ -274,17 +276,19 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
           placeholder="Type your idea..."
           className={`
             w-full
-            min-h-[80px]
+            min-h-[100px]
             bg-transparent
             border-none
             outline-none
             resize-none
+            overflow-hidden
             text-sm
             leading-relaxed
             whitespace-pre-wrap
+            transition-[height] duration-200 ease-in-out
             ${isAI ? 'text-blue-900 placeholder:text-blue-300' : 'text-yellow-900 placeholder:text-yellow-400'}
           `}
-          rows={3}
+          rows={4}
           disabled={isDisabled}
         />
       </div>
