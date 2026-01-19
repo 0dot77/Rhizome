@@ -206,9 +206,9 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
   };
 
   // Toolbar position based on layout direction
-  // Vertical: toolbar on bottom (expand downward)
-  // Horizontal: toolbar on right (expand rightward)
-  const toolbarPosition = isVertical ? Position.Bottom : Position.Right;
+  // Vertical: toolbar on right (expand downward, buttons visible on side)
+  // Horizontal: toolbar on bottom (expand rightward, buttons visible below)
+  const toolbarPosition = isVertical ? Position.Right : Position.Bottom;
 
   // Handle positions based on layout direction
   const targetPosition = isVertical ? Position.Top : Position.Left;
@@ -218,7 +218,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
     <>
       {/* Persona Toolbar - Position adapts to layout direction */}
       <NodeToolbar isVisible={showToolbar} position={toolbarPosition}>
-        <div className={`flex gap-1.5 ${isVertical ? 'flex-row' : 'flex-col'}`}>
+        <div className={`flex gap-1.5 ${isVertical ? 'flex-col' : 'flex-row'}`}>
           {/* Expand All button */}
           <Button
             variant="ghost"
