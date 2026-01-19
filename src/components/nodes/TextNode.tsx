@@ -1,9 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Handle, Position, NodeToolbar } from '@xyflow/react';
 import type { Node, NodeProps } from '@xyflow/react';
+import { Sprout } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useCanvasStore } from '@/store/useCanvasStore';
 
 export interface TextNodeData extends Record<string, unknown> {
@@ -15,6 +17,7 @@ export type TextNodeType = Node<TextNodeData, 'text'>;
 export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateNodeText = useCanvasStore((state) => state.updateNodeText);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -22,6 +25,10 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
     },
     [id, updateNodeText]
   );
+
+  const handleExpand = useCallback(() => {
+    alert('Expanding...');
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -39,13 +46,28 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
     }
   }, [selected, data.text]);
 
+  const showToolbar = isHovered || selected;
+
   return (
     <>
+      <NodeToolbar isVisible={showToolbar} position={Position.Right}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 bg-white shadow-md border border-zinc-200 hover:bg-amber-50"
+          onClick={handleExpand}
+        >
+          <Sprout className="h-4 w-4 text-green-600" />
+        </Button>
+      </NodeToolbar>
+
       <Handle type="target" position={Position.Top} className="!bg-zinc-400" />
       <Card
         className={`min-w-[200px] max-w-[300px] p-3 bg-amber-50 border-amber-200 shadow-md transition-shadow ${
           selected ? 'shadow-lg ring-2 ring-amber-400' : ''
         }`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <textarea
           ref={textareaRef}
