@@ -30,12 +30,15 @@ function CanvasInner() {
     []
   );
 
-  const handleDoubleClick = useCallback(
+  const handlePaneDoubleClick = useCallback(
     (event: React.MouseEvent) => {
+      // Convert screen coordinates to flow coordinates
       const position = screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
+
+      console.log('Double-click detected at:', position);
       addNode(position);
     },
     [screenToFlowPosition, addNode]
@@ -48,13 +51,14 @@ function CanvasInner() {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={handlePaneDoubleClick}
       nodeTypes={nodeTypes}
       fitView={false}
       defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       minZoom={0.1}
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
+      selectNodesOnDrag={false}
     >
       <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#e4e4e7" />
       <Controls className="!bg-white !border-zinc-200 !shadow-md" />
