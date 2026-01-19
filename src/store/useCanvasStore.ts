@@ -37,7 +37,14 @@ interface CanvasState {
   expandNode: (parentId: string, concepts: ExpandedConcept[], skeletonIds: string[]) => void;
   addPersonaNode: (parentId: string, title: string, content: string, skeletonId: string) => void;
   toggleLayoutDirection: () => void;
+  recalculateLayout: () => void;
 }
+
+// Node dimensions for layout calculations
+const NODE_WIDTH = 256; // w-64 = 16rem = 256px
+const NODE_HEIGHT = 160; // min-h-[160px]
+const GAP_VERTICAL = 100;
+const GAP_HORIZONTAL = 120;
 
 // Position offsets for child nodes based on direction
 const VERTICAL_POSITIONS = [
@@ -283,8 +290,91 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   },
 
   toggleLayoutDirection: () => {
-    set((state) => ({
-      layoutDirection: state.layoutDirection === 'VERTICAL' ? 'HORIZONTAL' : 'VERTICAL',
-    }));
+    const newDirection = get().layoutDirection === 'VERTICAL' ? 'HORIZONTAL' : 'VERTICAL';
+    set({ layoutDirection: newDirection });
+    // Trigger layout recalculation after direction change
+    get().recalculateLayout();
+  },
+
+  recalculateLayout: () => {
+    const { nodes, edges, layoutDirection } = get();
+
+    if (nodes.length === 0) return;
+
+    // Build parent-child relationships from edges
+    const childrenMap = new Map<string, string[]>();
+    const parentMap = new Map<string, string>();
+
+    edges.forEach((edge) => {
+      const children = childrenMap.get(edge.source) || [];
+      children.push(edge.target);
+      childrenMap.set(edge.source, children);
+      parentMap.set(edge.target, edge.source);
+    });
+
+    // Find root nodes (nodes without parents)
+    const rootNodes = nodes.filter((n) => !parentMap.has(n.id));
+
+    if (rootNodes.length === 0) return;
+
+    // Calculate new positions for all nodes
+    const newPositions = new Map<string, { x: number; y: number }>();
+
+    // Position root nodes
+    rootNodes.forEach((rootNode, rootIndex) => {
+      const baseX = layoutDirection === 'VERTICAL'
+        ? rootIndex * (NODE_WIDTH + GAP_HORIZONTAL * 3)
+        : 0;
+      const baseY = layoutDirection === 'VERTICAL'
+        ? 0
+        : rootIndex * (NODE_HEIGHT + GAP_VERTICAL * 2);
+
+      newPositions.set(rootNode.id, { x: baseX, y: baseY });
+
+      // Recursively position children
+      const positionChildren = (parentId: string, parentX: number, parentY: number, depth: number) => {
+        const children = childrenMap.get(parentId) || [];
+
+        children.forEach((childId, childIndex) => {
+          let childX: number;
+          let childY: number;
+
+          if (layoutDirection === 'VERTICAL') {
+            // Vertical: children spread horizontally below parent
+            const totalWidth = (children.length - 1) * (NODE_WIDTH + GAP_HORIZONTAL);
+            const startX = parentX - totalWidth / 2;
+            childX = startX + childIndex * (NODE_WIDTH + GAP_HORIZONTAL);
+            childY = parentY + NODE_HEIGHT + GAP_VERTICAL;
+          } else {
+            // Horizontal: children spread vertically to the right of parent
+            const totalHeight = (children.length - 1) * (NODE_HEIGHT + GAP_VERTICAL);
+            const startY = parentY - totalHeight / 2;
+            childX = parentX + NODE_WIDTH + GAP_HORIZONTAL;
+            childY = startY + childIndex * (NODE_HEIGHT + GAP_VERTICAL);
+          }
+
+          newPositions.set(childId, { x: childX, y: childY });
+
+          // Recursively position this node's children
+          positionChildren(childId, childX, childY, depth + 1);
+        });
+      };
+
+      positionChildren(rootNode.id, baseX, baseY, 0);
+    });
+
+    // Update all nodes with new positions
+    const updatedNodes = nodes.map((node) => {
+      const newPos = newPositions.get(node.id);
+      if (newPos) {
+        return {
+          ...node,
+          position: newPos,
+        };
+      }
+      return node;
+    }) as AppNode[];
+
+    set({ nodes: updatedNodes });
   },
 }));

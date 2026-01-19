@@ -25,8 +25,11 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
   const addSingleSkeletonNode = useCanvasStore((state) => state.addSingleSkeletonNode);
   const removeSkeletonNodes = useCanvasStore((state) => state.removeSkeletonNodes);
   const addPersonaNode = useCanvasStore((state) => state.addPersonaNode);
+  const layoutDirection = useCanvasStore((state) => state.layoutDirection);
   const anthropicKey = useSettingsStore((state) => state.anthropicKey);
   const setIsSettingsOpen = useSettingsStore((state) => state.setIsSettingsOpen);
+
+  const isVertical = layoutDirection === 'VERTICAL';
 
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanding, setIsExpanding] = useState(false);
@@ -202,11 +205,20 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
     pink: 'bg-pink-100 hover:bg-pink-200 border-pink-300 text-pink-700',
   };
 
+  // Toolbar position based on layout direction
+  // Vertical: toolbar on bottom (expand downward)
+  // Horizontal: toolbar on right (expand rightward)
+  const toolbarPosition = isVertical ? Position.Bottom : Position.Right;
+
+  // Handle positions based on layout direction
+  const targetPosition = isVertical ? Position.Top : Position.Left;
+  const sourcePosition = isVertical ? Position.Bottom : Position.Right;
+
   return (
     <>
-      {/* Persona Toolbar - Right side */}
-      <NodeToolbar isVisible={showToolbar} position={Position.Right}>
-        <div className="flex flex-col gap-1.5">
+      {/* Persona Toolbar - Position adapts to layout direction */}
+      <NodeToolbar isVisible={showToolbar} position={toolbarPosition}>
+        <div className={`flex gap-1.5 ${isVertical ? 'flex-row' : 'flex-col'}`}>
           {/* Expand All button */}
           <Button
             variant="ghost"
@@ -248,20 +260,21 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
         </div>
       </NodeToolbar>
 
-      <Handle type="target" position={Position.Top} className="!bg-zinc-400 !w-3 !h-3" />
+      {/* Connection handles - Position adapts to layout direction */}
+      <Handle type="target" position={targetPosition} className="!bg-zinc-400 !w-3 !h-3" />
 
       {/* Figma/Miro style sticky note - Fixed width, auto-height */}
       <div
         className={`
           w-64
-          min-h-[140px]
-          p-6
+          min-h-[160px]
+          p-8
           rounded-md
           border-t-8
           shadow-lg
           overflow-hidden
           box-border
-          transition-all duration-200 ease-in-out
+          transition-all duration-300 ease-in-out
           ${containerStyles}
           ${selected ? selectedStyles : 'hover:shadow-xl'}
           ${isDisabled ? 'opacity-70' : ''}
@@ -293,7 +306,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
         />
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="!bg-zinc-400 !w-3 !h-3" />
+      <Handle type="source" position={sourcePosition} className="!bg-zinc-400 !w-3 !h-3" />
     </>
   );
 }
