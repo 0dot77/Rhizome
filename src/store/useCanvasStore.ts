@@ -32,8 +32,10 @@ interface CanvasState {
   addNode: (position: { x: number; y: number }) => void;
   updateNodeText: (nodeId: string, text: string) => void;
   addSkeletonNodes: (parentId: string) => string[];
+  addSingleSkeletonNode: (parentId: string, index: number) => string | null;
   removeSkeletonNodes: (skeletonIds: string[]) => void;
   expandNode: (parentId: string, concepts: ExpandedConcept[], skeletonIds: string[]) => void;
+  addPersonaNode: (parentId: string, title: string, content: string, skeletonId: string) => void;
   toggleLayoutDirection: () => void;
 }
 
@@ -147,6 +149,43 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     return skeletonIds;
   },
 
+  addSingleSkeletonNode: (parentId, index) => {
+    const { nodes, edges, layoutDirection } = get();
+    const parentNode = nodes.find((n) => n.id === parentId);
+
+    if (!parentNode) return null;
+
+    const positions = layoutDirection === 'VERTICAL' ? VERTICAL_POSITIONS : HORIZONTAL_POSITIONS;
+    const position = positions[index] || positions[0];
+    const skeletonId = `skeleton-${Date.now()}-${index}`;
+
+    const skeletonNode: SkeletonNodeType = {
+      id: skeletonId,
+      type: 'skeleton',
+      position: {
+        x: parentNode.position.x + position.x,
+        y: parentNode.position.y + position.y,
+      },
+      data: { parentId } as SkeletonNodeData,
+    };
+
+    const newEdge: Edge = {
+      id: `edge-${parentId}-${skeletonId}`,
+      source: parentId,
+      target: skeletonId,
+      type: 'smoothstep',
+      animated: true,
+      style: { stroke: '#93c5fd', strokeDasharray: '5,5' },
+    };
+
+    set({
+      nodes: [...nodes, skeletonNode] as AppNode[],
+      edges: [...edges, newEdge],
+    });
+
+    return skeletonId;
+  },
+
   removeSkeletonNodes: (skeletonIds) => {
     const { nodes, edges } = get();
     set({
@@ -202,6 +241,44 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({
       nodes: [...filteredNodes, ...newNodes] as AppNode[],
       edges: [...filteredEdges, ...newEdges],
+    });
+  },
+
+  addPersonaNode: (parentId, title, content, skeletonId) => {
+    const { nodes, edges, layoutDirection } = get();
+    const parentNode = nodes.find((n) => n.id === parentId);
+    const skeletonNode = nodes.find((n) => n.id === skeletonId);
+
+    if (!parentNode || !skeletonNode) return;
+
+    // Remove skeleton node and its edge
+    const filteredNodes = nodes.filter((n) => n.id !== skeletonId);
+    const filteredEdges = edges.filter((e) => e.target !== skeletonId);
+
+    const childId = `node-${Date.now()}`;
+
+    const newNode: TextNodeType = {
+      id: childId,
+      type: 'text',
+      position: skeletonNode.position,
+      data: {
+        text: `${title}\n\n${content}`,
+        isAI: true,
+      } as TextNodeData,
+    };
+
+    const newEdge: Edge = {
+      id: `edge-${parentId}-${childId}`,
+      source: parentId,
+      target: childId,
+      type: 'smoothstep',
+      animated: false,
+      style: { stroke: '#3b82f6', strokeWidth: 2 },
+    };
+
+    set({
+      nodes: [...filteredNodes, newNode] as AppNode[],
+      edges: [...filteredEdges, newEdge],
     });
   },
 
